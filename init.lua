@@ -98,11 +98,19 @@ vim.g.have_nerd_font = false
 -- NOTE: You can change these options as you wish!
 --  For more options, you can see `:help option-list`
 
+vim.o.shell = 'pwsh'
+vim.o.shellcmdflag =
+  '-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command [Console]::InputEncoding=[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;'
+vim.o.shellredir = '-RedirectStandardOutput %s -NoNewWindow -Wait'
+vim.o.shellpipe = '2>&1 | Out-File -Encoding UTF8 %s; exit $LastExitCode'
+vim.o.shellquote = ''
+vim.o.shellxquote = ''
+
 -- Make line numbers default
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
+vim.o.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -596,8 +604,12 @@ require('lazy').setup({
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
       --  See `:help lsp-config` for information about keys and how to configure
       local servers = {
-        ols = {},
-        -- clangd = {},
+        clangd = {
+          on_attach = function(client, bufnr)
+            client.server_capabilities.documentFormattingProvider = false
+            client.server_capabilities.documentRangeFormattingProvider = false
+          end,
+        },
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
@@ -607,6 +619,12 @@ require('lazy').setup({
         --
         -- But for many setups, the LSP (`ts_ls`) will work just fine
         -- ts_ls = {},
+        ols = {
+          on_attach = function(client, bufnr)
+            client.server_capabilities.documentFormattingProvider = false
+            client.server_capabilities.documentRangeFormattingProvider = false
+          end,
+        },
       }
 
       -- Ensure the servers and tools above are installed
@@ -620,8 +638,6 @@ require('lazy').setup({
       vim.list_extend(ensure_installed, {
         'lua_ls', -- Lua Language server
         'stylua', -- Used to format Lua code
-        'ols',
-        -- You can add other tools here that you want Mason to install
       })
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
@@ -679,7 +695,7 @@ require('lazy').setup({
         -- Disable "format_on_save lsp_fallback" for languages that don't
         -- have a well standardized coding style. You can add additional
         -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
+        local disable_filetypes = { c = true, cpp = true, odin = true }
         if disable_filetypes[vim.bo[bufnr].filetype] then
           return nil
         else
@@ -775,6 +791,11 @@ require('lazy').setup({
 
       sources = {
         default = { 'lsp', 'path', 'snippets' },
+        per_filetype = {
+          odin = {},
+          c = {},
+          cpp = {},
+        },
       },
 
       snippets = { preset = 'luasnip' },
@@ -799,7 +820,8 @@ require('lazy').setup({
     config = function()
       ---@diagnostic disable-next-line: missing-fields
       require('gruvbox').setup {
-        styles = {},
+        terminal_colors = true,
+        transparent_mode = true,
       }
 
       vim.cmd.colorscheme 'gruvbox'
@@ -845,17 +867,17 @@ require('lazy').setup({
     end,
   },
 
-  { -- Highlight, edit, and navigate code
-    'nvim-treesitter/nvim-treesitter',
-    config = function()
-      local filetypes = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
-      require('nvim-treesitter').install(filetypes)
-      vim.api.nvim_create_autocmd('FileType', {
-        pattern = filetypes,
-        callback = function() vim.treesitter.start() end,
-      })
-    end,
-  },
+  -- { -- Highlight, edit, and navigate code
+  --   'nvim-treesitter/nvim-treesitter',
+  --   config = function()
+  --     local filetypes = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+  --     require('nvim-treesitter').install(filetypes)
+  --     vim.api.nvim_create_autocmd('FileType', {
+  --       pattern = filetypes,
+  --       callback = function() vim.treesitter.start() end,
+  --     })
+  --   end,
+  -- },
 
   -- The following comments only work if you have downloaded the kickstart repo, not just copy pasted the
   -- init.lua. If you want these files, they are in the repository, so you can just download them and
@@ -866,8 +888,8 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  require 'kickstart.plugins.indent_line',
-  require 'kickstart.plugins.lint',
+  -- require 'kickstart.plugins.indent_line',
+  -- require 'kickstart.plugins.lint',
   require 'kickstart.plugins.neo-tree',
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
@@ -902,7 +924,14 @@ require('lazy').setup({
   },
 })
 
+vim.filetype.add {
+  extension = {
+    ink = 'ink',
+  },
+}
+
 require 'custom.keymaps'
+require 'custom.godot'
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
