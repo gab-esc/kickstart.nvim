@@ -13,10 +13,6 @@ return {
   },
 
   {
-    'ahayworth/ink-syntax-vim',
-  },
-
-  {
     'kdheepak/lazygit.nvim',
     lazy = true,
     cmd = {
